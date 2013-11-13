@@ -1,6 +1,5 @@
 import riak
 
-
 # Creating Data
 
 customer = {
@@ -11,7 +10,7 @@ customer = {
     'state': "Ohio",
     'zip': "43210",
     'phone': "+1-614-555-5555",
-    'created_date': "2013-10-1 14:30:26"
+    'created_date': "2013-10-01 14:30:26"
 }
 
 orders = [
@@ -32,7 +31,7 @@ orders = [
             }
         ],
         'total': 415.98,
-        'order_date': "2013-10-1 14:42:26"
+        'order_date': "2013-10-01 14:42:26"
     },
     {
         'order_id': 2,
@@ -65,7 +64,7 @@ orders = [
             }
         ],
         'total': 74.98,
-        'order_date': "2013-11-3 17:45:28"
+        'order_date': "2013-11-03 17:45:28"
     }]
 
 order_summary = {
@@ -74,7 +73,7 @@ order_summary = {
         {
             'order_id': 1,
             'total': 415.98,
-            'order_date': "2013-10-1 14:42:26"
+            'order_date': "2013-10-01 14:42:26"
         },
         {
             'order_id': 2,
@@ -84,7 +83,7 @@ order_summary = {
         {
             'order_id': 3,
             'total': 74.98,
-            'order_date': "2013-11-3 17:45:28"
+            'order_date': "2013-11-03 17:45:28"
         }
     ]
 }
