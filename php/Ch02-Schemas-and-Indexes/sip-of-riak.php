@@ -183,7 +183,6 @@ $order_summary_riak->store();
 
 
 // Fetching related data by shared key
-
 $fetched_customer = $customersBucket->get('1')->data;
 $fetched_customer['orderSummary'] = $orderSummariesBucket->get('1')->data;
 print("Customer with OrderSummary data: \n");
