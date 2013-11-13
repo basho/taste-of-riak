@@ -16,9 +16,9 @@ public class SipOfRiak {
     public static void main(String[] args) throws RiakException {
 
         System.out.println("Creating Data");
-        Customer customer = CreateCustomer();
-        ArrayList<Order> orders = CreateOrders();
-        OrderSummary orderSummary = CreateOrderSummary(orders);
+        Customer customer = createCustomer();
+        ArrayList<Order> orders = createOrders();
+        OrderSummary orderSummary = createOrderSummary(orders);
 
 
         System.out.println("Starting Client");
@@ -26,9 +26,9 @@ public class SipOfRiak {
 
 
         System.out.println("Creating Buckets");
-        Bucket customersBucket = client.createBucket("Customers").execute();
-        Bucket ordersBucket = client.createBucket("Orders").execute();
-        Bucket orderSummariesBucket = client.createBucket("OrderSummaries").execute();
+        Bucket customersBucket = client.fetchBucket("Customers").lazyLoadBucketProperties().execute();
+        Bucket ordersBucket = client.fetchBucket("Orders").lazyLoadBucketProperties().execute();
+        Bucket orderSummariesBucket = client.fetchBucket("OrderSummaries").lazyLoadBucketProperties().execute();
 
         System.out.println("Storing Data");
         customersBucket.store(String.valueOf(customer.CustomerId), customer).execute();
@@ -90,7 +90,7 @@ public class SipOfRiak {
         client.shutdown();
     }
 
-    private static Customer CreateCustomer() {
+    private static Customer createCustomer() {
         Customer customer = new Customer();
         customer.CustomerId = 1;
         customer.Name = "John Smith";
@@ -103,7 +103,7 @@ public class SipOfRiak {
         return customer;
     }
 
-    private static ArrayList<Order> CreateOrders() {
+    private static ArrayList<Order> createOrders() {
         ArrayList<Order> orders = new ArrayList<Order>();
 
         Order order1 = new Order();
@@ -152,7 +152,7 @@ public class SipOfRiak {
         return orders;
     }
 
-    private static OrderSummary CreateOrderSummary(ArrayList<Order> orders) {
+    private static OrderSummary createOrderSummary(ArrayList<Order> orders) {
         OrderSummary orderSummary = new OrderSummary();
         orderSummary.CustomerId = 1;
         for(Order order: orders)
