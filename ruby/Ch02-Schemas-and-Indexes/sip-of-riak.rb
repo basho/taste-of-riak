@@ -1,6 +1,7 @@
 # Encoding: utf-8
 #
 require 'riak'
+require 'pp'
 
 # Starting Client
 client = Riak::Client.new protocol: 'pbc', pb_port: 10017
@@ -115,7 +116,8 @@ os.store
 shared_key = '1'
 customer = customer_bucket.get(shared_key).data
 customer[:order_summary] = order_summary_bucket.get(shared_key).data
-puts customer
+puts "Combined Customer and Order Summary: "
+pp customer
 
 ### Adding Index Data
 
@@ -134,8 +136,10 @@ end
 ### 2i queries
 
 # Query for orders where the SalespersonId index is set to 9000
-puts order_bucket.get_index('salesperson_id_int', 9000)
+puts "Jane's Orders: "
+pp order_bucket.get_index('salesperson_id_int', 9000)
 
 # Query for orders where the OrderDate index
 # is between 2013-10-01 and 2013-10-31
-puts order_bucket.get_index('order_date_bin', '20131001'..'20131031')
+puts "October's Orders: "
+pp order_bucket.get_index('order_date_bin', '20131001'..'20131031')
