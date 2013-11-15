@@ -1,3 +1,5 @@
+# Encoding: utf-8
+#
 require 'riak'
 
 # Starting Client
@@ -91,47 +93,49 @@ order_summary = {
 }
 
 # Creating Buckets and Storing Data
-customer_bucket = client.bucket("Customers")
+customer_bucket = client.bucket('Customers')
 cr = customer_bucket.new(customer[:customer_id].to_s)
 cr.data = customer
-cr.store()
+cr.store
 
-order_bucket = client.bucket("Orders")
+order_bucket = client.bucket('Orders')
 orders.each do |order|
   order_riak = order_bucket.new(order[:order_id].to_s)
   order_riak.data = order
-  order_riak.store()
+  order_riak.store
 end
 
-order_summary_bucket = client.bucket("OrderSummaries")
+order_summary_bucket = client.bucket('OrderSummaries')
 os = order_summary_bucket.new(order_summary[:customer_id].to_s)
 os.data = order_summary
-os.store()
+os.store
 
+### Fetching related data by shared key
 
-# Fetching related data by shared key
 shared_key = '1'
 customer = customer_bucket.get(shared_key).data
 customer[:order_summary] = order_summary_bucket.get(shared_key).data
-customer
+puts customer
 
+### Adding Index Data
 
-# Adding Index Data
 (1..3).each do |i|
   order = order_bucket.get(i.to_s)
   # Initialize our secondary indices
   order.indexes['salesperson_id_int'] = []
   order.indexes['order_date_bin'] = []
-  
-  order.indexes['salesperson_id_int'] <<  order.data['salesperson_id'] 
-  order.indexes['order_date_bin'] << Time.parse(order.data['order_date']).strftime("%Y%m%d") 
-  order.store()
+
+  order.indexes['salesperson_id_int'] <<  order.data['salesperson_id']
+  order.indexes['order_date_bin'] << Time.parse(order.data['order_date'])
+                                         .strftime('%Y%m%d')
+  order.store
 end
 
+### 2i queries
 
-# 2i queries
 # Query for orders where the SalespersonId index is set to 9000
-order_bucket.get_index('salesperson_id_int', 9000)
+puts order_bucket.get_index('salesperson_id_int', 9000)
 
-# Query for orders where the OrderDate index is between 2013-10-01 and 2013-10-31
-order_bucket.get_index('order_date_bin', '20131001'..'20131031')
+# Query for orders where the OrderDate index
+# is between 2013-10-01 and 2013-10-31
+puts order_bucket.get_index('order_date_bin', '20131001'..'20131031')
