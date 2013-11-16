@@ -13,13 +13,13 @@ public class TasteOfRiak
             // Wrap our generics so we can use .class
             class StringIntMap extends HashMap<String,Integer> {}
 
-            // Creating Objects In Riak
-            System.out.println("Creating Objects In Riak...");
-
             IRiakClient client = RiakFactory.pbcClient();
 
             // Note: Use this line instead of the former if using a local devrel cluster
             //IRiakClient client = RiakFactory.pbcClient("127.0.0.1", 10017);
+
+            // Creating Objects In Riak
+            System.out.println("Creating Objects In Riak...");
 
             Bucket myBucket = client.fetchBucket("test").execute();
 
