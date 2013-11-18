@@ -4,7 +4,7 @@
 {ok, Pid} = riakc_pb_socket:start_link("127.0.0.1", 8087).
 
 %% Note: Use this line instead of the former if using a local devrel cluster
-{ok, Pid} = riakc_pb_socket:start_link("127.0.0.1", 10017).
+%%{ok, Pid} = riakc_pb_socket:start_link("127.0.0.1", 10017).
 
 %% Creating Objects In Riak
 io:fwrite("Creating Objects In Riak...~n").
