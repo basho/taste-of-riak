@@ -91,7 +91,7 @@ void get(riak_config *cfg, riak_connection *cxn) {
     // check this for errors after performing an operation
     riak_error err;
 
-    // allocate a struct to set DELETE options, specifically
+    // allocate a struct to set GET options, specifically
     // to set the basic_quorum & r options
     riak_get_options *get_options = riak_get_options_new(cfg);
     riak_get_options_set_basic_quorum(get_options, RIAK_TRUE);
@@ -165,6 +165,10 @@ main(int argc, char *argv[])
 
     // use the default configuration
     riak_error err = riak_config_new_default(&cfg);
+    if(err != ERIAK_OK) {
+      fprintf(stderr, "Error creating client configuration\n");
+      exit(1);
+    }
 
     riak_connection *cxn = NULL;
 
