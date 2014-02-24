@@ -32,6 +32,8 @@ void put(riak_config *cfg, riak_connection *cxn) {
     // create "binaries" on the heap to store bucket, key, and value for
     // the new riak_object
     // A binary is just a charset-agnostic byte array
+    // a well behaved client should check for NULL
+    // when allocating new structs
     riak_binary *bucket_bin   = riak_binary_copy_from_string(cfg, "TestBucket");
     riak_binary *key_bin      = riak_binary_copy_from_string(cfg, "TestKey");
     riak_binary *value_bin    = riak_binary_copy_from_string(cfg, "TestData");
@@ -83,6 +85,8 @@ void get(riak_config *cfg, riak_connection *cxn) {
 
     // create "binaries" on the heap to store bucket and key
     // for the object we are going to GET
+    // a well behaved client should check for NULL
+    // when allocating new structs
     riak_binary *bucket_bin   = riak_binary_copy_from_string(cfg, "TestBucket");
     riak_binary *key_bin      = riak_binary_copy_from_string(cfg, "TestKey");
 
@@ -125,6 +129,8 @@ void delete(riak_config *cfg, riak_connection *cxn) {
 
     // create "binaries" on the heap to store bucket and key
     // for the object we are going to DELETE
+    // a well behaved client should check for NULL
+    // when allocating new structs
     riak_binary *bucket_bin   = riak_binary_copy_from_string(cfg, "TestBucket");
     riak_binary *key_bin      = riak_binary_copy_from_string(cfg, "TestKey");
 
