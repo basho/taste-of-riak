@@ -19,7 +19,6 @@
  *********************************************************************/
 
 #include <riak.h>
-#include <riak_libevent.h>
 
 /*
 gcc `pkg-config --cflags --libs riak-c-client` taste_of_riak.c
@@ -39,7 +38,6 @@ main(int argc, char *argv[])
     riak_delete_options *delete_options;
 
     char output[10240];
-    struct event_base *base = event_base_new();
 
     // create some sample binary values to use
     riak_binary *bucket_bin   = riak_binary_copy_from_string(cfg, "TestBucket");
@@ -48,7 +46,6 @@ main(int argc, char *argv[])
     riak_binary *content_type = riak_binary_copy_from_string(cfg, "application/json");
 
     riak_connection  *cxn   = NULL;
-    riak_libevent    *event = NULL;
     riak_operation   *rop   = NULL;
 
     // Create a connection with the default address resolver
@@ -60,40 +57,31 @@ main(int argc, char *argv[])
 
     err = riak_operation_new(cxn, &rop, NULL, NULL, NULL);
 
+    get_options = riak_get_options_new(cfg);
+    if (get_options == NULL) {
+    //    riak_log_critical(cxn, "%s","Could not allocate a Riak Get Options");
+        return 1;
+    }
 
-//    err = riak_libevent_new(&event, rop, base);
-//    riak_operation_set_error_cb(rop, example_error_cb);
-//   riak_operation_set_cb_data(rop, rop);
+    riak_get_options_set_basic_quorum(get_options, RIAK_TRUE);
+    riak_get_options_set_r(get_options, 2);
 
+    riak_get_response *get_response = NULL;
+    err = riak_get(cxn, bucket_bin, key_bin, get_options, &get_response);
+    if (err == ERIAK_OK) {
+        riak_print_get_response(get_response, output, sizeof(output));
+        printf("%s\n", output);
+    }
+    riak_get_response_free(cfg, &get_response);
 
-/*GET
-            get_options = riak_get_options_new(cfg);
-            if (get_options == NULL) {
-                riak_log_critical(cxn, "%s","Could not allocate a Riak Get Options");
-                return 1;
-            }
-            riak_get_options_set_basic_quorum(get_options, RIAK_TRUE);
-            riak_get_options_set_r(get_options, 2);
-            if (args.async) {
-                err = riak_async_register_get(rop, bucket_bin, key_bin, get_options, (riak_response_callback)example_get_cb);
-            } else {
-                riak_get_response *get_response = NULL;
-                err = riak_get(cxn, bucket_bin, key_bin, get_options, &get_response);
-                if (err == ERIAK_OK) {
-                    riak_print_get_response(get_response, output, sizeof(output));
-                    printf("%s\n", output);
-                }
-                riak_get_response_free(cfg, &get_response);
-            }
-            riak_get_options_free(cfg, &get_options);
-            if (err) {
-                fprintf(stderr, "Get Problems [%s]\n", riak_strerror(err));
-                exit(1);
-            }
-            break;
-
+    riak_get_options_free(cfg, &get_options);
+    if (err) {
+        fprintf(stderr, "Get Problems [%s]\n", riak_strerror(err));
+        exit(1);
+    }
 
 // PUT
+/*
             obj = riak_object_new(cfg);
             if (obj == NULL) {
                 riak_log_critical(cxn, "%s","Could not allocate a Riak Object");
