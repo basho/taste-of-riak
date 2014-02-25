@@ -18,8 +18,12 @@
  *
  *********************************************************************/
 
-#include <riak.h>
+// NOTE: this is a demo program to show off basic operations
+// against Riak. For a more in-depth example, see:
+// https://github.com/basho/riak-c-client/blob/develop/examples/example.c
+//
 
+#include <riak.h>
 
 void put(riak_config *cfg, riak_connection *cxn) {
     fprintf(stdout, "-------------------------------\n");
@@ -122,6 +126,56 @@ void get(riak_config *cfg, riak_connection *cxn) {
     }
 }
 
+void update(riak_config *cfg, riak_connection *cxn) {
+    fprintf(stdout, "-------------------------------\n");
+    fprintf(stdout, "Test Riak UPDATE\n");
+    fprintf(stdout, "-------------------------------\n");
+
+    // create "binaries" on the heap to store bucket and key
+    // for the object we are going to GET
+    // a well behaved client should check for NULL
+    // when allocating new structs
+    riak_binary *bucket_bin    = riak_binary_copy_from_string(cfg, "TestBucket");
+    riak_binary *key_bin       = riak_binary_copy_from_string(cfg, "TestKey");
+    riak_binary *new_value_bin = riak_binary_copy_from_string(cfg, "MyValue");
+
+    // check this for errors after performing an operation
+    riak_error err;
+
+    // allocate a struct to set GET options, specifically
+    // to set the basic_quorum & r options
+    riak_get_options *get_options = riak_get_options_new(cfg);
+    riak_get_options_set_basic_quorum(get_options, RIAK_TRUE);
+    riak_get_options_set_r(get_options, 2);
+
+    riak_get_response *get_response = NULL;
+    err = riak_get(cxn, bucket_bin, key_bin, get_options, &get_response);
+    if(err) {
+      fprintf(stderr, "Error fetching object for update\n");
+      exit(1);
+    }
+    riak_object *obj = riak_get_get_content(get_response)[0];
+    riak_object_set_value(cfg, obj, new_value_bin);
+
+    riak_put_response *put_response = NULL;
+    riak_put_options *put_options = riak_put_options_new(cfg);
+    err = riak_put(cxn, obj, put_options, &put_response);
+    if(err) {
+      fprintf(stderr, "Error storing updated object\n");
+      exit(1);
+    }
+
+    // cleanup
+    riak_get_response_free(cfg, &get_response);
+    riak_put_response_free(cfg, &put_response);
+    riak_free(cfg, &bucket_bin);
+    riak_free(cfg, &key_bin);
+    riak_get_options_free(cfg, &get_options);
+    riak_put_options_free(cfg, &put_options);
+
+    fprintf(stdout, "Ok\n");
+}
+
 void delete(riak_config *cfg, riak_connection *cxn) {
     fprintf(stdout, "-------------------------------\n");
     fprintf(stdout, "Test Riak DELETE\n");
@@ -194,8 +248,15 @@ main(int argc, char *argv[])
 
     // test a PUT
     put(cfg, cxn);
+
     // test a GET
     get(cfg, cxn);
+
+    // test an UPDATE
+    update(cfg, cxn);
+    // get the value again
+    get(cfg, cxn);
+
     // test a DELETE
     delete(cfg, cxn);
 
