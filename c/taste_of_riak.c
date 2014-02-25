@@ -179,9 +179,16 @@ main(int argc, char *argv[])
     riak_connection *cxn = NULL;
 
     // Create a connection with the default address resolver
-    err = riak_connection_new(cfg, &cxn, "localhost", "10017", NULL);
+    const char* riak_host = "localhost";
+    // 8087 is the default protocol buffers port if you are using
+    //  Riak from a pre-built package or source build using "make rel"
+    // 10017 is the default port if you have built from source
+    //  using "make devrel"
+    const char* riak_port = "8087";
+    err = riak_connection_new(cfg, &cxn, riak_host, riak_port, NULL);
+
     if (err) {
-        fprintf(stderr, "Cannot connect to Riak on localhost:10017\n");
+        fprintf(stderr, "Cannot connect to Riak on %s:%s\n", riak_host, riak_port);
         exit(1);
     }
 
