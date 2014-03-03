@@ -68,9 +68,9 @@ void put(riak_config *cfg, riak_connection *cxn) {
     // cleanup
     riak_put_response_free(cfg, &put_response);
     riak_object_free(cfg, &obj);
-    riak_free(cfg, &bucket_bin);
-    riak_free(cfg, &key_bin);
-    riak_free(cfg, &value_bin);
+    riak_binary_free(cfg, &bucket_bin);
+    riak_binary_free(cfg, &key_bin);
+    riak_binary_free(cfg, &value_bin);
     riak_put_options_free(cfg, &put_options);
 
     if (err) {
@@ -114,8 +114,8 @@ void get(riak_config *cfg, riak_connection *cxn) {
 
     // cleanup
     riak_get_response_free(cfg, &get_response);
-    riak_free(cfg, &bucket_bin);
-    riak_free(cfg, &key_bin);
+    riak_binary_free(cfg, &bucket_bin);
+    riak_binary_free(cfg, &key_bin);
     riak_get_options_free(cfg, &get_options);
 
     if (err) {
@@ -168,8 +168,8 @@ void update(riak_config *cfg, riak_connection *cxn) {
     // cleanup
     riak_get_response_free(cfg, &get_response);
     riak_put_response_free(cfg, &put_response);
-    riak_free(cfg, &bucket_bin);
-    riak_free(cfg, &key_bin);
+    riak_binary_free(cfg, &bucket_bin);
+    riak_binary_free(cfg, &key_bin);
     riak_get_options_free(cfg, &get_options);
     riak_put_options_free(cfg, &put_options);
 
@@ -206,8 +206,8 @@ void delete(riak_config *cfg, riak_connection *cxn) {
 
     // cleanup
     riak_delete_options_free(cfg, &delete_options);
-    riak_free(cfg, &bucket_bin);
-    riak_free(cfg, &key_bin);
+    riak_binary_free(cfg, &bucket_bin);
+    riak_binary_free(cfg, &key_bin);
 
     if (err) {
         fprintf(stderr, "Error executing DELETE [%s]\n", riak_strerror(err));
