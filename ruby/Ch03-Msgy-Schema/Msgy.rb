@@ -1,5 +1,6 @@
 require 'riak'
 require 'hashie'
+require 'time'
 
 class User < Hashie::Dash
     property :user_name
@@ -58,6 +59,7 @@ class MsgRepository
         riak_obj = msgs.new(key)
         riak_obj.data = msg
         riak_obj.content_type = "application/json"
+        riak_obj.prevent_stale_writes = true
         riak_obj.store(returnbody: true)
     end
 
@@ -98,13 +100,13 @@ class TimelineRepository
     private
 
     def add_to_timeline(msg, type, msg_key)
-        key = generate_key_from_msg(msg, type)
+        timeline_key = generate_key_from_msg(msg, type)
         riak_obj = nil
 
-        if @client.bucket(BUCKET).exists?(msg_key)
-            riak_obj = add_to_existing_timeline(key, msg_key)
+        if @client.bucket(BUCKET).exists?(timeline_key)
+            riak_obj = add_to_existing_timeline(timeline_key, msg_key)
         else
-            riak_obj = create_new_timeline(key, msg, type, msg_key)
+            riak_obj = create_new_timeline(timeline_key, msg, type, msg_key)
         end
             
         riak_obj.store
@@ -136,7 +138,7 @@ class TimelineRepository
     end
 
     def generate_key(owner, type, date)
-        owner + "_" + type + "_" + date.utc.strftime("%FZ")
+        owner + "_" + type + "_" + date.utc.strftime("%F")
     end
 end
 
@@ -166,6 +168,6 @@ puts "From: #{joes_first_message.from}\nMsg : #{joes_first_message.text}"
 
 # Cleanup, never ever use list keys.  Ever.
 # Riak.disable_list_keys_warnings = true
-# ['Users', 'Timeslines', 'Msgs'].each {|b| client.bucket(b).keys.each {|k| client[b].delete(k)}}
+# ['Users', 'Timelines', 'Msgs'].each {|b| client.bucket(b).keys.each {|k| client[b].delete(k)}}
 # Riak.disable_list_keys_warnings = false
 
