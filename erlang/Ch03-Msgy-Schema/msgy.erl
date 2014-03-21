@@ -1,7 +1,7 @@
 -module(msgy).
 -export([save_user/2, 
          get_user/2, 
-         post_message/2, 
+         post_msg/2, 
          get_timeline/4,
          create_msg/3, 
          get_msg/2]).
@@ -16,6 +16,7 @@
 -type msg_type() :: 'inbox' | 'sent'.
 -type user_name() :: nonempty_string().
 -type full_name() :: nonempty_string().
+-type datetimestamp() :: nonempty_string().
 -type text() :: nonempty_string().
 -type email() :: nonempty_string().
 -type year() :: non_neg_integer().
@@ -29,7 +30,7 @@
 
 -record(msg, {sender :: user_name(), 
               recipient :: user_name(), 
-              created :: nonempty_string(), 
+              created :: datetimestamp(), 
               text :: nonempty_string()}).
 
 -record(timeline, {owner :: user_name(), 
@@ -65,17 +66,18 @@ create_msg(Sender, Recipient, Text) ->
          created=get_current_iso_timestamp(),
          text = Text}.
 
--spec post_message(pid(), msg()) -> riakc_obj:riakc_obj().
-post_message(ClientPid, Msg) -> 
+-spec post_msg(pid(), msg()) -> atom().
+post_msg(ClientPid, Msg) -> 
      %% Save the cannonical copy
     SavedMsg = save_msg(ClientPid, Msg),
-    MsgKey = riakc_obj:key(SavedMsg),
+    MsgKey = binary_to_list(riakc_obj:key(SavedMsg)),
 
     %% Post to sender's Sent timeline
-    add_to_timeline(ClientPid, Msg, ?SENT, MsgKey),
+    add_to_timeline(ClientPid, Msg, sent, MsgKey),
 
     %% Post to recipient's Inbox timeline
-    add_to_timeline(ClientPid, Msg, ?INBOX, MsgKey).
+    add_to_timeline(ClientPid, Msg, inbox, MsgKey),
+    ok.
 
 -spec get_timeline(pid(), 
                user_name(),
@@ -88,18 +90,18 @@ get_timeline(ClientPid, Owner, MsgType, Date) ->
                                           list_to_binary(TimelineKey)),
     binary_to_term(riakc_obj:get_value(RTimeline)).
 
--spec get_msg(pid(), key_string()) -> msg().
+-spec get_msg(pid(), riakc_obj:key()) -> msg().
 get_msg(ClientPid, MsgKey) -> 
     {ok, RMsg} = riakc_pb_socket:get(ClientPid, 
                                      ?MSG_BUCKET, 
-                                     list_to_binary(MsgKey)),
+                                     MsgKey),
     binary_to_term(riakc_obj:get_value(RMsg)).
 
 
 %% @private
 -spec save_msg(pid(), msg()) -> riakc_obj:riakc_obj().
 save_msg(ClientPid, Msg) -> 
-    MsgKey = Msg#msg.sender + "_" + Msg#msg.created,
+    MsgKey = Msg#msg.sender ++ "_" ++ Msg#msg.created,
     ExistingMsg = riakc_pb_socket:get(ClientPid, 
                                       ?MSG_BUCKET, 
                                       list_to_binary(MsgKey)),
@@ -112,7 +114,7 @@ save_msg(ClientPid, Msg) ->
             NewSaved;
         {ok, Existing} -> Existing
     end,
-    binary_to_term(riakc_obj:get_value(SavedMsg)).
+    SavedMsg.
 
 %% @private
 -spec add_to_timeline(pid(), msg(), msg_type(), key_string()) -> riakc_obj:riakc_obj().
@@ -152,11 +154,8 @@ add_to_existing_timeline(ExistingRiakObj, MsgKey) ->
 
 %% @private 
 -spec get_owner(msg(), msg_type()) -> user_name().
-get_owner(Msg, MsgType) ->    
-    case MsgType of
-        ?INBOX -> Msg#msg.recipient;
-        ?SENT -> Msg#msg.sender
-    end.
+get_owner(Msg, inbox) ->  Msg#msg.recipient;
+get_owner(Msg, sent) ->  Msg#msg.sender.
 
 %% @private
 -spec generate_key_from_msg(msg(), msg_type()) -> key_string().
@@ -165,20 +164,37 @@ generate_key_from_msg(Msg, MsgType) ->
     generate_key(Owner, MsgType, Msg#msg.created).
 
 %% @private
--spec generate_key(user_name(), msg_type(), date()) -> nonempty_string().
-generate_key(Owner, MsgType, Date) ->
+-spec generate_key(user_name(), msg_type(), date()|datetimestamp()) -> key_string().
+generate_key(Owner, MsgType, Date) when is_tuple(Date) ->
     DateString = get_iso_datestamp_from_date(Date),
-    Owner + '_' + MsgType + '_' + DateString.
+    generate_key(Owner, MsgType, DateString);
+
+generate_key(Owner, MsgType, Datetimestamp) ->
+    DateString = get_iso_datestamp_from_iso_timestamp(Datetimestamp),
+    MsgTypeString = case MsgType of
+        inbox -> ?INBOX;
+        sent -> ?SENT
+    end,
+    Owner ++ "_" ++ MsgTypeString ++ "_" ++ DateString.
 
 %% @private
--spec get_current_iso_timestamp() -> nonempty_string().
+-spec get_current_iso_timestamp() -> datetimestamp().
 get_current_iso_timestamp() ->
     {_,_,MicroSec} = DateTime = erlang:now(),
     {{Year,Month,Day},{Hour,Min,Sec}} = calendar:now_to_universal_time(DateTime),
-    io:format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0B.~6..0B",
-        [Year, Month, Day, Hour, Min, Sec, MicroSec]).
+    lists:flatten(
+        io_lib:format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0B.~6..0B",
+            [Year, Month, Day, Hour, Min, Sec, MicroSec])).
+
+%% @private 
+-spec get_iso_datestamp_from_date(date()) -> nonempty_string().
+get_iso_datestamp_from_date(Date) ->
+    {Year,Month,Day} = Date,
+    lists:flatten(io_lib:format("~4..0B-~2..0B-~2..0B", [Year, Month, Day])).
 
 %% @private
--spec get_iso_datestamp_from_date(date()) -> nonempty_string().
-get_iso_datestamp_from_date({Year,Month,Day}) ->
-    io:format("~4..0B-~2..0B-~2..0B", [Year, Month, Day]).
+-spec get_iso_datestamp_from_iso_timestamp(datetimestamp()) -> nonempty_string().
+get_iso_datestamp_from_iso_timestamp(CreatedString) ->
+    {Date, _} = lists:split(10,CreatedString),
+    Date.
+    
