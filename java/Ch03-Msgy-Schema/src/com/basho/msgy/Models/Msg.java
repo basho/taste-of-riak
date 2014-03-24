@@ -1,7 +1,5 @@
 package com.basho.msgy.Models;
 
-import com.basho.riak.client.convert.RiakKey;
-
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;

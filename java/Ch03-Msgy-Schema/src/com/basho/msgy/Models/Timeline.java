@@ -25,6 +25,4 @@ public class Timeline {
     public String Owner;
     public String Type;
     public ArrayList<String> Msgs;
-
-
 }
