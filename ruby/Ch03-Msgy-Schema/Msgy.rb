@@ -24,6 +24,7 @@ class Timeline < Hashie::Dash
 end
 
 class UserRepository
+  include Hashie::Extensions::SymbolizeKeys
   BUCKET = 'Users'
 
   def initialize(client)
@@ -42,11 +43,12 @@ class UserRepository
 
   def get(user_name)
     riak_obj = @client.bucket(BUCKET)[user_name]
-    User.new(riak_obj.data)
+    User.new(riak_obj.data.symbolize_keys)
   end
 end
 
 class MsgRepository
+  include Hashie::Extensions::SymbolizeKeys
   BUCKET = 'Msgs'
 
   def initialize(client)
@@ -67,7 +69,7 @@ class MsgRepository
 
   def get(key)
     riak_obj = @client.bucket(BUCKET).get(key)
-    Msg.new(riak_obj.data)
+    Msg.new(riak_obj.data.symbolize_keys)
   end
 
   def generate_key(msg)
@@ -76,6 +78,7 @@ class MsgRepository
 end
 
 class TimelineRepository
+  include Hashie::Extensions::SymbolizeKeys
   BUCKET = 'Timelines'
   SENT = 'Sent'
   INBOX = 'Inbox'
@@ -96,7 +99,7 @@ class TimelineRepository
 
   def get_timeline(owner, type, date)
     riak_obj = @client.bucket(BUCKET).get(generate_key(owner, type, date))
-    Timeline.new(riak_obj.data)
+    Timeline.new(riak_obj.data.symbolize_keys)
   end
 
   private
@@ -126,7 +129,7 @@ class TimelineRepository
 
   def add_to_existing_timeline(key, msg_key)
     riak_obj = @client.bucket(BUCKET).get(key)
-    timeline = Timeline.new(riak_obj.data)
+    timeline = Timeline.new(riak_obj.data.symbolize_keys)
     timeline.msgs << msg_key
     riak_obj.data = timeline
     riak_obj
