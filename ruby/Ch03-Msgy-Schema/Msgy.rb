@@ -150,7 +150,7 @@ class TimelineRepository
 end
 
 # Setup our repositories
-client = Riak::Client.new(pb_port: 17017)
+client = Riak::Client.new(pb_port: 10017)
 user_repo = UserRepository.new(client)
 msgs_repo = MsgRepository.new(client)
 timeline_repo = TimelineRepository.new(client)
