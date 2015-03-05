@@ -4,6 +4,9 @@ require 'riak'
 require 'hashie'
 require 'time'
 
+MultiJson.use 'json_gem'
+Riak.json_options[:symbolize_keys] = true
+
 class User < Hashie::Dash
   property :user_name
   property :full_name
@@ -147,7 +150,7 @@ class TimelineRepository
 end
 
 # Setup our repositories
-client = Riak::Client.new(protocol: 'pbc', pb_port: 10017)
+client = Riak::Client.new(pb_port: 10017)
 user_repo = UserRepository.new(client)
 msgs_repo = MsgRepository.new(client)
 timeline_repo = TimelineRepository.new(client)
