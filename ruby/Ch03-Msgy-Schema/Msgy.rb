@@ -4,6 +4,9 @@ require 'riak'
 require 'hashie'
 require 'time'
 
+MultiJson.use 'json_gem'
+Riak.json_options[:symbolize_keys] = true
+
 class User < Hashie::Dash
   property :user_name
   property :full_name
