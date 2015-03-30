@@ -5,7 +5,7 @@
     using RiakClient;
     using RiakClient.Models;
 
-    public abstract class Repository<TModel> : IRepository<TModel> where TModel : IModel
+    public abstract class Repository<TModel> : IRepository<TModel> where TModel : class, IModel
     {
         private IRiakClient client;
 
@@ -37,8 +37,27 @@
         public virtual string Save(TModel model)
         {
             var riakObjectId = new RiakObjectId(BucketName, model.ID);
-            var riakObject = new RiakObject(riakObjectId, model);
-            RiakResult<RiakObject> result = client.Put(riakObject);
+            RiakResult<RiakObject> result = client.Get(riakObjectId);
+            CheckResult(result, true);
+
+            RiakObject objToUpdate = null;
+            if (result.Value != null)
+            {
+                objToUpdate = result.Value;
+                if (objToUpdate.Siblings.Count > 0)
+                {
+                    // Provide a better sibling resolution strategy here in production
+                    objToUpdate = objToUpdate.Siblings[0];
+                }
+
+                objToUpdate.SetObject<TModel>(model);
+            }
+            else
+            {
+                objToUpdate = new RiakObject(riakObjectId, model);
+            }
+
+            result = client.Put(objToUpdate);
             CheckResult(result);
             RiakObject value = result.Value;
             return value.Key;
