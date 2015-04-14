@@ -14,7 +14,7 @@ $node = (new Node\Builder)
 $riak = new Riak([$node]);
 
 // Note: Use this line instead of the former if using a local devrel cluster
-//$client = new Basho\Riak\Riak('127.0.0.1', 10018);
+// $node = (new Node\Builder)->atHost('127.0.0.1')->onPort(10018)->build();
 
 // Creating Objects In Riak
 ('Creating Objects In Riak...' . PHP_EOL);
