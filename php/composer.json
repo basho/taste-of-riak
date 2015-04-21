@@ -1,6 +1,6 @@
 {
   "require": {
     "php": ">=5.4",
-    "basho/riak": "2.0.x-dev"
+    "basho/riak": "2.0.1"
   }
 }
