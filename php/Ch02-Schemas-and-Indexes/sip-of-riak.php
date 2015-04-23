@@ -1,6 +1,6 @@
 <?php
 
-include_once '../vendor/autoload.php';
+include_once 'vendor/autoload.php';
 
 use Basho\Riak;
 use Basho\Riak\Location;
@@ -157,6 +157,7 @@ foreach ($orders as $order) {
 unset($order);
 
 
+
 // Starting Client
 $node = (new Node\Builder)
     ->atHost('127.0.0.1')
@@ -247,6 +248,7 @@ $fetchOctoberOrders = (new Command\Builder\QueryIndex($riak))
                         ->inBucket($ordersBucket)
                         ->withIndexName('OrderDate_bin')
                         ->withRangeValue('2013-10-01','2013-10-31')
+                        ->withReturnTerms(true)
                         ->build();
 
 $octobers_orders = $fetchOctoberOrders->execute()->getResults();
@@ -254,4 +256,23 @@ $octobers_orders = $fetchOctoberOrders->execute()->getResults();
 print("\n\nOctober's Orders: \n");
 print_r($octobers_orders);
 
+
+// Cleanup all our data
+(new Command\Builder\DeleteObject($riak))
+    ->atLocation(new Location($customer->customerId, $customersBucket))
+    ->build()
+    ->execute();
+    
+foreach ($orders as $order) {
+    (new Command\Builder\DeleteObject($riak))
+        ->atLocation(new Location($order->orderId, $ordersBucket))
+        ->build()
+        ->execute();
+}
+unset($order);
+
+(new Command\Builder\DeleteObject($riak))
+    ->atLocation(new Location($orderSummary->customerId, $orderSummariesBucket))
+    ->build()
+    ->execute();
 ?>

@@ -1,6 +1,6 @@
 <?php
 
-include_once '../vendor/autoload.php';
+include_once 'vendor/autoload.php';
 
 use Basho\Riak;
 use Basho\Riak\Node;
@@ -69,7 +69,7 @@ $object3 = $response3->getObject();
 $data3 = $object3->getData();
 
 $data3['myValue'] = 42;
-$object3 = $object3->setData(json_encode($data3));
+$object3 = $object3->setData($data3);
 
 $updateCommand = (new Command\Builder\StoreObject($riak))
     ->withObject($object3)
