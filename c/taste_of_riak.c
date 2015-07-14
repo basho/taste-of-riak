@@ -25,40 +25,86 @@
 
 #include <riak.h>
 
-void put(riak_config *cfg, riak_connection *cxn) {
-    fprintf(stdout, "-------------------------------\n");
-    fprintf(stdout, "Test Riak PUT\n");
-    fprintf(stdout, "-------------------------------\n");
+struct riak_req {
+    riak_config *cfg;
+    riak_connection *cxn;
 
-    // create a new riak_object on the heap
-    riak_object *obj = riak_object_new(cfg);
+    riak_object *obj;
+    riak_binary *btype; // bucket type (usu. default)
+    riak_binary *bucket;
 
-    // create "binaries" on the heap to store bucket, key, and value for
-    // the new riak_object
-    // A binary is just a charset-agnostic byte array
-    // a well behaved client should check for NULL
-    // when allocating new structs
-    riak_binary *bucket_bin   = riak_binary_copy_from_string(cfg, "TestBucket");
-    riak_binary *key_bin      = riak_binary_copy_from_string(cfg, "TestKey");
-    riak_binary *value_bin    = riak_binary_copy_from_string(cfg, "TestData");
+    // default options for get/put/del
+    riak_get_options *getopt;
+    riak_put_options *putopt;
+    riak_delete_options *delopt;
 
-    // a buffer to write results into
-    char output[10240];
-    // check this for errors after performing an operation
-    riak_error err;
+};
+//    riak_binary *key_bin;
+//    riak_binary *value_bin;
+
+struct riak_req *riak_req_new(riak_config *cfg, riak_connection *cxn,
+                              char *bucket) {
+    struct riak_req *req = malloc(sizeof(struct riak_req));
+
+    // Basic stuff
+    req->cfg = cfg;
+    req->cxn = cxn;
+    req->btype  = riak_binary_copy_from_string(cfg, "default");
+    req->bucket = riak_binary_copy_from_string(cfg, bucket);
+
+    // Set sensible default basic_quorum & r options.
+    req->getopt = riak_get_options_new(cfg);
+    riak_get_options_set_basic_quorum(req->getopt, RIAK_TRUE);
+    riak_get_options_set_r(req->getopt, 2);
+
+    // Just return the head by default.
+    req->putopt = riak_put_options_new(cfg);
+    riak_put_options_set_return_head(req->putopt, RIAK_TRUE);
+
+    // Yes, delete.
+    req->delopt = riak_delete_options_new(cfg);
+    if(req->delopt == NULL) {
+        return NULL;
+    }
+    riak_delete_options_set_w(req->delopt, 1);
+    riak_delete_options_set_dw(req->delopt, 1);
+
+    return req;
+}
+
+void riak_req_free(struct riak_req **reqp) {
+    struct riak_req *req = *reqp;
+    riak_binary_free(req->cfg, &req->btype);
+    riak_binary_free(req->cfg, &req->bucket);
+
+    riak_get_options_free(   req->cfg, &req->getopt);
+    riak_put_options_free(   req->cfg, &req->putopt);
+    riak_delete_options_free(req->cfg, &req->delopt);
+
+}
+
+// Create a new riak_object on the heap.
+riak_object *mk_riak_object(struct riak_req *req,
+                            riak_binary *key, riak_binary *value) {
+    riak_object *obj = riak_object_new(req->cfg);
 
     // populate the riak_object with bucket, key and value
-    riak_object_set_bucket(cfg, obj, bucket_bin);
-    riak_object_set_key(cfg, obj, key_bin);
-    riak_object_set_value(cfg, obj, value_bin);
+    riak_object_set_bucket(req->cfg, obj, req->bucket);
+    riak_object_set_key(req->cfg, obj, key);
+    riak_object_set_value(req->cfg, obj, value);
+    return obj;
+}
 
-    // allocate a struct to set PUT options, specifically to return the head
-    riak_put_options *put_options = riak_put_options_new(cfg);
-    riak_put_options_set_return_head(put_options, RIAK_TRUE);
+char *put(struct riak_req *req, riak_binary *key, riak_binary *value) {
+    char output[10240];
+    riak_error err;
+    char *err_s = NULL;
+
+    riak_object *obj = mk_riak_object(req, key, value);
 
     riak_put_response *put_response = NULL;
     // run the PUT and display the result (from return_head)
-    err = riak_put(cxn, obj, put_options, &put_response);
+    err = riak_put(req->cxn, obj, req->putopt, &put_response);
     if (err == ERIAK_OK) {
         // use a riak-c-client convenience function to display the response
         riak_print_state out;
@@ -68,211 +114,168 @@ void put(riak_config *cfg, riak_connection *cxn) {
     }
 
     // cleanup
-    riak_put_response_free(cfg, &put_response);
-    riak_object_free(cfg, &obj);
-    riak_binary_free(cfg, &bucket_bin);
-    riak_binary_free(cfg, &key_bin);
-    riak_binary_free(cfg, &value_bin);
-    riak_put_options_free(cfg, &put_options);
+    riak_put_response_free(req->cfg, &put_response);
+    riak_object_free(req->cfg, &obj);
 
     if (err) {
-        fprintf(stderr, "Error executing PUT: %s\n", riak_strerror(err));
-        exit(1);
-    } else {
-      fprintf(stdout, "Ok\n");
+        asprintf(&err_s, "Error executing PUT: %s\n", riak_strerror(err));
     }
-
+    return err_s;
 }
 
-void get(riak_config *cfg, riak_connection *cxn) {
-    fprintf(stdout, "-------------------------------\n");
-    fprintf(stdout, "Test Riak GET\n");
-    fprintf(stdout, "-------------------------------\n");
-
-    // create "binaries" on the heap to store bucket and key
-    // for the object we are going to GET
-    // a well behaved client should check for NULL
-    // when allocating new structs
-    riak_binary *bucket_type  = riak_binary_copy_from_string(cfg, "default");
-    riak_binary *bucket_bin   = riak_binary_copy_from_string(cfg, "TestBucket");
-    riak_binary *key_bin      = riak_binary_copy_from_string(cfg, "TestKey");
-
-    // a buffer to write results into
+char *get(struct riak_req *req, riak_binary *key, riak_get_response **resp) {
     char output[10240];
-    // check this for errors after performing an operation
     riak_error err;
+    char *err_s = NULL;
 
-    // allocate a struct to set GET options, specifically
-    // to set the basic_quorum & r options
-    riak_get_options *get_options = riak_get_options_new(cfg);
-    riak_get_options_set_basic_quorum(get_options, RIAK_TRUE);
-    riak_get_options_set_r(get_options, 2);
-
-    riak_get_response *get_response = NULL;
-    err = riak_get(cxn, bucket_type, bucket_bin,
-                        key_bin, get_options, &get_response);
-    if (err == ERIAK_OK) {
+    *resp = NULL;
+    err = riak_get(req->cxn, req->btype, req->bucket, key, req->getopt, resp);
+    if(err == ERIAK_OK) {
         riak_print_state out;
         riak_print_init(&out, output, sizeof(output));
 
-        riak_get_response_print(&out, get_response);
+        riak_get_response_print(&out, *resp);
         printf("%s\n", output);
     }
 
-    // cleanup
-    riak_get_response_free(cfg, &get_response);
-    riak_binary_free(cfg, &bucket_type);
-    riak_binary_free(cfg, &bucket_bin);
-    riak_binary_free(cfg, &key_bin);
-    riak_get_options_free(cfg, &get_options);
-
-    if (err) {
-        fprintf(stderr, "Error executing GET: %s\n", riak_strerror(err));
-        exit(1);
-    } else {
-        fprintf(stdout, "Ok\n");
+    if(err) {
+        asprintf(&err_s, "Error executing GET: %s\n", riak_strerror(err));
+        riak_get_response_free(req->cfg, resp);
     }
+    return err_s;
 }
 
-void update(riak_config *cfg, riak_connection *cxn) {
-    fprintf(stdout, "-------------------------------\n");
-    fprintf(stdout, "Test Riak UPDATE\n");
-    fprintf(stdout, "-------------------------------\n");
-
-    // create "binaries" on the heap to store bucket and key
-    // for the object we are going to GET
-    // a well behaved client should check for NULL
-    // when allocating new structs
-    riak_binary *bucket_type   = riak_binary_copy_from_string(cfg, "default");
-    riak_binary *bucket_bin    = riak_binary_copy_from_string(cfg, "TestBucket");
-    riak_binary *key_bin       = riak_binary_copy_from_string(cfg, "TestKey");
-    riak_binary *new_value_bin = riak_binary_copy_from_string(cfg, "MyValue");
-
-    // check this for errors after performing an operation
+char *update(struct riak_req *req, riak_binary *key, riak_binary *new_value) {
     riak_error err;
-
-    // allocate a struct to set GET options, specifically
-    // to set the basic_quorum & r options
-    riak_get_options *get_options = riak_get_options_new(cfg);
-    riak_get_options_set_basic_quorum(get_options, RIAK_TRUE);
-    riak_get_options_set_r(get_options, 2);
-
+    char *err_s = NULL;
     riak_get_response *get_response = NULL;
-    err = riak_get(cxn, bucket_type, bucket_bin, key_bin, get_options, &get_response);
+
+    err = riak_get(req->cxn, req->btype, req->bucket, key,
+                   req->getopt, &get_response);
     if(err) {
-      fprintf(stderr, "Error fetching object for update\n");
-      exit(1);
+        asprintf(&err_s, "Error fetching object for update\n");
+        return err_s;
     }
     riak_object *obj = riak_get_get_content(get_response)[0];
-    riak_object_set_value(cfg, obj, new_value_bin);
+    riak_object_set_value(req->cfg, obj, new_value);
 
     riak_put_response *put_response = NULL;
-    riak_put_options *put_options = riak_put_options_new(cfg);
-    err = riak_put(cxn, obj, put_options, &put_response);
+    err = riak_put(req->cxn, obj, req->putopt, &put_response);
     if(err) {
-      fprintf(stderr, "Error storing updated object\n");
-      exit(1);
+        asprintf(&err_s, "Error storing updated object\n");
+        return err_s;
     }
 
     // cleanup
-    riak_get_response_free(cfg, &get_response);
-    riak_put_response_free(cfg, &put_response);
-    riak_binary_free(cfg, &bucket_type);
-    riak_binary_free(cfg, &bucket_bin);
-    riak_binary_free(cfg, &key_bin);
-    riak_get_options_free(cfg, &get_options);
-    riak_put_options_free(cfg, &put_options);
+    riak_get_response_free(req->cfg, &get_response);
+    riak_put_response_free(req->cfg, &put_response);
 
-    fprintf(stdout, "Ok\n");
+    return NULL;
 }
 
-void delete(riak_config *cfg, riak_connection *cxn) {
-    fprintf(stdout, "-------------------------------\n");
-    fprintf(stdout, "Test Riak DELETE\n");
-    fprintf(stdout, "-------------------------------\n");
-
-    // create "binaries" on the heap to store bucket and key
-    // for the object we are going to DELETE
-    // a well behaved client should check for NULL
-    // when allocating new structs
-    riak_binary *bucket_type  = riak_binary_copy_from_string(cfg, "default");
-    riak_binary *bucket_bin   = riak_binary_copy_from_string(cfg, "TestBucket");
-    riak_binary *key_bin      = riak_binary_copy_from_string(cfg, "TestKey");
-
-    // a buffer to write results into
-    //char output[10240];
-
-    // check this for errors after performing an operation
+char *delete(struct riak_req *req, riak_binary *key) {
     riak_error err;
+    char *err_s = NULL;
 
-    riak_delete_options *delete_options = riak_delete_options_new(cfg);
+    err = riak_delete(req->cxn, req->btype, req->bucket, key, req->delopt);
 
-    if (delete_options == NULL) {
-        riak_log_critical(cxn, "%s","Could not allocate a Riak Delete Options");
-        return;
+    if(err) {
+        asprintf(&err_s, "Error executing DELETE [%s]\n", riak_strerror(err));
     }
-    riak_delete_options_set_w(delete_options, 1);
-    riak_delete_options_set_dw(delete_options, 1);
-    err = riak_delete(cxn, bucket_type, bucket_bin, key_bin, delete_options);
-
-    // cleanup
-    riak_delete_options_free(cfg, &delete_options);
-    riak_binary_free(cfg, &bucket_type);
-    riak_binary_free(cfg, &bucket_bin);
-    riak_binary_free(cfg, &key_bin);
-
-    if (err) {
-        fprintf(stderr, "Error executing DELETE [%s]\n", riak_strerror(err));
-        exit(1);
-    } else {
-        fprintf(stdout, "Ok\n");
-    }
+    return err_s;
 }
 
-int
-main(int argc, char *argv[])
-{
+
+// Create a connection with the default address resolver
+// 8087 is the default protocol buffers port if you are using
+//   Riak from a pre-built package or source build using "make rel"
+// 10017 is the default port if you have built from source
+//   using "make devrel"
+riak_connection *riak_open(riak_config *cfg,
+                           const char *host, const char *port) {
+    riak_connection *cxn = NULL;
+    riak_error err = riak_connection_new(cfg, &cxn, host, port, NULL);
+    if(err != ERIAK_OK) {
+        fprintf(stderr, "Cannot connect to Riak on %s:%s\n", host, port);
+        return NULL;
+    }
+    return cxn;
+}
+
+int main(int argc, char *argv[]) {
     // a riak_config serves as your per-thread state to interact with Riak
     riak_config *cfg;
-
     // use the default configuration
     riak_error err = riak_config_new_default(&cfg);
     if(err != ERIAK_OK) {
-      fprintf(stderr, "Error creating client configuration\n");
-      exit(1);
-    }
-
-    riak_connection *cxn = NULL;
-
-    // Create a connection with the default address resolver
-    const char* riak_host = "localhost";
-    // 8087 is the default protocol buffers port if you are using
-    //  Riak from a pre-built package or source build using "make rel"
-    // 10017 is the default port if you have built from source
-    //  using "make devrel"
-    const char* riak_port = "8087";
-    err = riak_connection_new(cfg, &cxn, riak_host, riak_port, NULL);
-
-    if (err) {
-        fprintf(stderr, "Cannot connect to Riak on %s:%s\n", riak_host, riak_port);
+        fprintf(stderr, "Error creating client configuration\n");
         exit(1);
     }
+    riak_connection *cxn = riak_open(cfg, "localhost", "8087");
+    if(cxn == NULL) {
+        exit(1);
+    }
+    char *err_s;
 
-    // test a PUT
-    put(cfg, cxn);
+    struct riak_req *req = riak_req_new(cfg, cxn, "TestBucket");
+    riak_binary *key      = riak_binary_copy_from_string(req->cfg, "TestKey");
+    riak_binary *value    = riak_binary_copy_from_string(req->cfg, "TestData");
+    riak_get_response *resp;
 
-    // test a GET
-    get(cfg, cxn);
 
-    // test an UPDATE
-    update(cfg, cxn);
-    // get the value again
-    get(cfg, cxn);
+    printf("-------------------------------\n");
+    printf("Test Riak PUT\n");
+    printf("-------------------------------\n");
+    if( (err_s = put(req, key, value)) != NULL) {
+        fprintf(stderr, "%s", err_s);
+        exit(1);
+    }
+    riak_binary_free(cfg, &value);
 
-    // test a DELETE
-    delete(cfg, cxn);
+    printf("-------------------------------\n");
+    printf("Test Riak GET\n");
+    printf("-------------------------------\n");
+    if( (err_s = get(req, key, &resp)) != NULL) {
+        fprintf(stderr, "%s", err_s);
+        exit(1);
+    }
+    riak_get_response_free(cfg, &resp);
+
+    // Change the value
+    value = riak_binary_copy_from_string(req->cfg, "MyValue");
+
+    printf("-------------------------------\n");
+    printf("Test Riak UPDATE\n");
+    printf("-------------------------------\n");
+    if( (err_s = update(req, key, value)) != NULL) {
+        fprintf(stderr, "%s", err_s);
+        exit(1);
+    }
+    printf("Ok.\n");
+
+    printf("-------------------------------\n");
+    printf("Test Riak GET\n");
+    printf("-------------------------------\n");
+    if( (err_s = get(req, key, &resp)) != NULL) {
+        fprintf(stderr, "%s", err_s);
+        exit(1);
+    }
+    riak_get_response_free(cfg, &resp);
+
+    printf("-------------------------------\n");
+    printf("Test Riak DELETE\n");
+    printf("-------------------------------\n");
+    if( (err_s = delete(req, key)) != NULL) {
+        fprintf(stderr, "%s", err_s);
+        exit(1);
+    }
+    printf("Ok.\n");
 
     // cleanup
+    riak_binary_free(cfg, &key);
+    riak_binary_free(cfg, &value);
+
+    riak_req_free(&req);
     riak_connection_free(&cxn);
     riak_config_free(&cfg);
 
