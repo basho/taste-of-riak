@@ -25,11 +25,19 @@
 
 #include <riak.h>
 
+/*  This is an example struct to hold config data
+ * for a key/value operations on a single bucket.
+ *
+ *  It caches default options to cover the
+ * most common use cases.  They can be modified
+ * by changing the behavior of riak_req_new,
+ * or modifying the struct and its callers (get/put/update/delete).
+ *
+ */
 struct riak_req {
     riak_config *cfg;
     riak_connection *cxn;
 
-    riak_object *obj;
     riak_binary *btype; // bucket type (usu. default)
     riak_binary *bucket;
 
@@ -37,10 +45,7 @@ struct riak_req {
     riak_get_options *getopt;
     riak_put_options *putopt;
     riak_delete_options *delopt;
-
 };
-//    riak_binary *key_bin;
-//    riak_binary *value_bin;
 
 struct riak_req *riak_req_new(riak_config *cfg, riak_connection *cxn,
                               char *bucket) {
@@ -80,7 +85,6 @@ void riak_req_free(struct riak_req **reqp) {
     riak_get_options_free(   req->cfg, &req->getopt);
     riak_put_options_free(   req->cfg, &req->putopt);
     riak_delete_options_free(req->cfg, &req->delopt);
-
 }
 
 // Create a new riak_object on the heap.
@@ -99,10 +103,9 @@ char *put(struct riak_req *req, riak_binary *key, riak_binary *value) {
     char output[10240];
     riak_error err;
     char *err_s = NULL;
-
     riak_object *obj = mk_riak_object(req, key, value);
-
     riak_put_response *put_response = NULL;
+
     // run the PUT and display the result (from return_head)
     err = riak_put(req->cxn, obj, req->putopt, &put_response);
     if (err == ERIAK_OK) {
@@ -148,27 +151,27 @@ char *get(struct riak_req *req, riak_binary *key, riak_get_response **resp) {
 char *update(struct riak_req *req, riak_binary *key, riak_binary *new_value) {
     riak_error err;
     char *err_s = NULL;
-    riak_get_response *get_response = NULL;
+    riak_get_response *resp = NULL;
+    riak_put_response *put_resp = NULL;
 
     err = riak_get(req->cxn, req->btype, req->bucket, key,
-                   req->getopt, &get_response);
+                   req->getopt, &resp);
     if(err) {
         asprintf(&err_s, "Error fetching object for update\n");
         return err_s;
     }
-    riak_object *obj = riak_get_get_content(get_response)[0];
+    riak_object *obj = riak_get_get_content(resp)[0];
     riak_object_set_value(req->cfg, obj, new_value);
 
-    riak_put_response *put_response = NULL;
-    err = riak_put(req->cxn, obj, req->putopt, &put_response);
+    err = riak_put(req->cxn, obj, req->putopt, &put_resp);
     if(err) {
         asprintf(&err_s, "Error storing updated object\n");
         return err_s;
     }
 
     // cleanup
-    riak_get_response_free(req->cfg, &get_response);
-    riak_put_response_free(req->cfg, &put_response);
+    riak_get_response_free(req->cfg, &resp);
+    riak_put_response_free(req->cfg, &put_resp);
 
     return NULL;
 }
@@ -227,7 +230,8 @@ int main(int argc, char *argv[]) {
     printf("Test Riak PUT\n");
     printf("-------------------------------\n");
     if( (err_s = put(req, key, value)) != NULL) {
-        fprintf(stderr, "%s", err_s);
+        printf("%s", err_s);
+        free(err_s);
         exit(1);
     }
     riak_binary_free(cfg, &value);
@@ -236,7 +240,8 @@ int main(int argc, char *argv[]) {
     printf("Test Riak GET\n");
     printf("-------------------------------\n");
     if( (err_s = get(req, key, &resp)) != NULL) {
-        fprintf(stderr, "%s", err_s);
+        printf("%s", err_s);
+        free(err_s);
         exit(1);
     }
     riak_get_response_free(cfg, &resp);
@@ -248,7 +253,8 @@ int main(int argc, char *argv[]) {
     printf("Test Riak UPDATE\n");
     printf("-------------------------------\n");
     if( (err_s = update(req, key, value)) != NULL) {
-        fprintf(stderr, "%s", err_s);
+        printf("%s", err_s);
+        free(err_s);
         exit(1);
     }
     printf("Ok.\n");
@@ -257,7 +263,8 @@ int main(int argc, char *argv[]) {
     printf("Test Riak GET\n");
     printf("-------------------------------\n");
     if( (err_s = get(req, key, &resp)) != NULL) {
-        fprintf(stderr, "%s", err_s);
+        printf("%s", err_s);
+        free(err_s);
         exit(1);
     }
     riak_get_response_free(cfg, &resp);
@@ -266,7 +273,8 @@ int main(int argc, char *argv[]) {
     printf("Test Riak DELETE\n");
     printf("-------------------------------\n");
     if( (err_s = delete(req, key)) != NULL) {
-        fprintf(stderr, "%s", err_s);
+        printf("%s", err_s);
+        free(err_s);
         exit(1);
     }
     printf("Ok.\n");
