@@ -121,6 +121,7 @@ void get(riak_config *cfg, riak_connection *cxn) {
 
     // cleanup
     riak_get_response_free(cfg, &get_response);
+    riak_binary_free(cfg, &bucket_type);
     riak_binary_free(cfg, &bucket_bin);
     riak_binary_free(cfg, &key_bin);
     riak_get_options_free(cfg, &get_options);
@@ -176,6 +177,7 @@ void update(riak_config *cfg, riak_connection *cxn) {
     // cleanup
     riak_get_response_free(cfg, &get_response);
     riak_put_response_free(cfg, &put_response);
+    riak_binary_free(cfg, &bucket_type);
     riak_binary_free(cfg, &bucket_bin);
     riak_binary_free(cfg, &key_bin);
     riak_get_options_free(cfg, &get_options);
@@ -215,6 +217,7 @@ void delete(riak_config *cfg, riak_connection *cxn) {
 
     // cleanup
     riak_delete_options_free(cfg, &delete_options);
+    riak_binary_free(cfg, &bucket_type);
     riak_binary_free(cfg, &bucket_bin);
     riak_binary_free(cfg, &key_bin);
 
