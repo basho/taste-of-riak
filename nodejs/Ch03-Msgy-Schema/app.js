@@ -98,6 +98,3 @@ function client_shutdown() {
         }
     });
 }
-
-/*
-*/
