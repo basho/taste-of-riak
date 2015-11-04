@@ -1,0 +1,77 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "hash": "7a16e7d849568ef07969bd3090d605ec",
+    "content-hash": "7e3a3d6f19cb90da25df873c16d70351",
+    "packages": [
+        {
+            "name": "basho/riak",
+            "version": "v2.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/basho/riak-php-client.git",
+                "reference": "093ae6f5f0bd37a65ad7e7e934edfd7ab7f7cd1c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/basho/riak-php-client/zipball/093ae6f5f0bd37a65ad7e7e934edfd7ab7f7cd1c",
+                "reference": "093ae6f5f0bd37a65ad7e7e934edfd7ab7f7cd1c",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "php": ">=5.4"
+            },
+            "require-dev": {
+                "apigen/apigen": "4.1.*",
+                "basho/tools": "1.0.0",
+                "phpunit/phpunit": "4.5.*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Basho\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Riak Team & Contributors",
+                    "homepage": "https://github.com/basho/riak-php-client/contributors"
+                }
+            ],
+            "description": "Official Riak client for PHP",
+            "homepage": "http://basho.com/riak/",
+            "keywords": [
+                "basho",
+                "client",
+                "crdt",
+                "data",
+                "database",
+                "datatype",
+                "driver",
+                "kv",
+                "nosql",
+                "riak"
+            ],
+            "time": "2015-04-16 17:47:21"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": {
+        "php": ">=5.4"
+    },
+    "platform-dev": []
+}

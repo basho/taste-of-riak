@@ -1,15 +1,18 @@
 <?php
 
-include_once 'vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
+
+define('RIAK_HOST', getenv('RIAK_HOST') ?: '127.0.0.1');
+define('RIAK_PORT', getenv('RIAK_PORT') ?: 8098);
 
 use Basho\Riak;
 use Basho\Riak\Node;
 use Basho\Riak\Command;
 
-$node = (new Node\Builder)
-        ->atHost('127.0.0.1')
-        ->onPort(8098)
-        ->build();
+$node = (new Node\Builder())
+    ->atHost(RIAK_HOST)
+    ->onPort(RIAK_PORT)
+    ->build();
 
 $riak = new Riak([$node]);
 
@@ -17,7 +20,7 @@ $riak = new Riak([$node]);
 // $node = (new Node\Builder)->atHost('127.0.0.1')->onPort(10018)->build();
 
 // Creating Objects In Riak
-('Creating Objects In Riak...' . PHP_EOL);
+print('Creating Objects In Riak...'.PHP_EOL);
 
 $val1 = 1;
 $val2 = 'two';
@@ -28,20 +31,17 @@ $location1 = new Riak\Location('one', $bucket);
 $location2 = new Riak\Location('two', $bucket);
 $location3 = new Riak\Location('three', $bucket);
 
-
 $storeCommand1 = (new Command\Builder\StoreObject($riak))
                     ->buildObject($val1)
                     ->atLocation($location1)
                     ->build();
 $storeCommand1->execute();
 
-
 $storeCommand2 = (new Command\Builder\StoreObject($riak))
                     ->buildObject($val2)
                     ->atLocation($location2)
                     ->build();
 $storeCommand2->execute();
-
 
 $storeCommand3 = (new Command\Builder\StoreObject($riak))
                     ->buildJsonObject($val3)
@@ -50,7 +50,7 @@ $storeCommand3 = (new Command\Builder\StoreObject($riak))
 $storeCommand3->execute();
 
 // Reading Objects From Riak
-print('Reading Objects From Riak...' . PHP_EOL);
+print('Reading Objects From Riak...'.PHP_EOL);
 
 $response1 = (new Command\Builder\FetchObject($riak))->atLocation($location1)->build()->execute();
 $response2 = (new Command\Builder\FetchObject($riak))->atLocation($location2)->build()->execute();
@@ -63,7 +63,7 @@ assert($val2 == $response2->getObject()->getData());
 assert($val3 == $response3->getObject()->getData());
 
 // Updating Objects In Riak
-print('Updating Objects In Riak...'. PHP_EOL);
+print('Updating Objects In Riak...'.PHP_EOL);
 
 $object3 = $response3->getObject();
 $data3 = $object3->getData();
@@ -79,22 +79,22 @@ $updateCommand = (new Command\Builder\StoreObject($riak))
 $updateCommand->execute();
 
 // Deleting Objects From Riak
-print('Deleting Objects From Riak...' . PHP_EOL);
+print('Deleting Objects From Riak...'.PHP_EOL);
 
 (new Command\Builder\DeleteObject($riak))->atLocation($location1)->build()->execute();
 (new Command\Builder\DeleteObject($riak))->atLocation($location2)->build()->execute();
 (new Command\Builder\DeleteObject($riak))->atLocation($location3)->build()->execute();
 
 // Working With Complex Objects
-print('Working With Complex Objects...' . PHP_EOL);
+print('Working With Complex Objects...'.PHP_EOL);
 
 class Book
 {
-    var $title;
-    var $author;
-    var $body;
-    var $isbn;
-    var $copiesOwned;
+    public $title;
+    public $author;
+    public $body;
+    public $isbn;
+    public $copiesOwned;
 }
 
 $book = new Book();
@@ -116,9 +116,7 @@ $storeCommand1->execute();
 $fetchBookResponse = (new Command\Builder\FetchObject($riak))
                         ->atLocation($bookLocation)->build()->execute();
 
-print('Serialized Object:' . PHP_EOL);
-print($fetchBookResponse->getBody() . PHP_EOL);
+print('Serialized Object:'.PHP_EOL);
+print($fetchBookResponse->getBody().PHP_EOL);
 
 (new Command\Builder\DeleteObject($riak))->atLocation($bookLocation)->build()->execute();
-
-?>
