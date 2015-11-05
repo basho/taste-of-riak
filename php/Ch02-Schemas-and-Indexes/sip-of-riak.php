@@ -1,15 +1,18 @@
 <?php
 
-include_once 'vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
+
+define('RIAK_HOST', getenv('RIAK_HOST') ?: '127.0.0.1');
+define('RIAK_PORT', getenv('RIAK_PORT') ?: 8098);
 
 use Basho\Riak;
 use Basho\Riak\Location;
 use Basho\Riak\Node;
 use Basho\Riak\Command;
 
-$node = (new Node\Builder)
-    ->atHost('127.0.0.1')
-    ->onPort(8098)
+$node = (new Node\Builder())
+    ->atHost(RIAK_HOST)
+    ->onPort(RIAK_PORT)
     ->build();
 
 $riak = new Riak([$node]);
@@ -18,14 +21,14 @@ $riak = new Riak([$node]);
 
 class Customer
 {
-    var $customerId;
-    var $name;
-    var $address;
-    var $city;
-    var $state;
-    var $zip;
-    var $phone;
-    var $createdDate;
+    public $customerId;
+    public $name;
+    public $address;
+    public $city;
+    public $state;
+    public $zip;
+    public $phone;
+    public $createdDate;
 }
 
 class Order
@@ -34,12 +37,12 @@ class Order
     {
         $this->items = array();
     }
-    var $orderId;
-    var $customerId;
-    var $salespersonId;
-    var $items;
-    var $total;
-    var $orderDate;
+    public $orderId;
+    public $customerId;
+    public $salespersonId;
+    public $items;
+    public $total;
+    public $orderDate;
 }
 
 class Item
@@ -50,34 +53,33 @@ class Item
         $this->title = $title;
         $this->price = $price;
     }
-    var $itemId;
-    var $title;
-    var $price;
+    public $itemId;
+    public $title;
+    public $price;
 }
 
 class OrderSummary
 {
-    public function __construct() 
+    public function __construct()
     {
         $this->summaries = array();
     }
-    var $customerId;
-    var $summaries;
+    public $customerId;
+    public $summaries;
 }
 
 class OrderSummaryItem
 {
-    public function __construct(Order $order) 
+    public function __construct(Order $order)
     {
         $this->orderId = $order->orderId;
         $this->total = $order->total;
         $this->orderDate = $order->orderDate;
     }
-    var $orderId;
-    var $total;
-    var $orderDate;
+    public $orderId;
+    public $total;
+    public $orderDate;
 }
-
 
 // Creating Data
 $customer = new Customer();
@@ -89,7 +91,6 @@ $customer->state = 'Ohio';
 $customer->zip = '43210';
 $customer->phone = '+1-614-555-5555';
 $customer->createdDate = '2013-10-01 14:30:26';
-
 
 $orders = [];
 
@@ -104,10 +105,10 @@ $order1->items = [
         15.99
     ),
     new Item(
-        'PEG10BBF2PP', 
-        'eTablet Pro; 24GB; Grey', 
+        'PEG10BBF2PP',
+        'eTablet Pro; 24GB; Grey',
         399.99
-    )
+    ),
 ];
 $order1->total = 415.98;
 $order1->orderDate = '2013-10-01 14:42:26';
@@ -122,7 +123,7 @@ $order2->items = [
         'OAX19XWN0QP',
         'GoSlo Digital Camera',
         359.99
-    )
+    ),
 ];
 $order2->total = 359.99;
 $order2->orderDate = '2013-10-15 16:43:16';
@@ -142,12 +143,11 @@ $order3->items = [
         'TJB84HAA8OA',
         'Bricko Building Blocks',
         4.99
-    )
+    ),
 ];
 $order3->total = 74.98;
 $order3->orderDate = '2013-11-03 17:45:28';
 $orders[] = $order3;
-
 
 $orderSummary = new OrderSummary();
 $orderSummary->customerId = 1;
@@ -156,12 +156,10 @@ foreach ($orders as $order) {
 }
 unset($order);
 
-
-
 // Starting Client
-$node = (new Node\Builder)
-    ->atHost('127.0.0.1')
-    ->onPort(8098)
+$node = (new Node\Builder())
+    ->atHost(RIAK_HOST)
+    ->onPort(RIAK_PORT)
     ->build();
 
 $riak = new Riak([$node]);
@@ -193,7 +191,6 @@ $storeSummary = (new Command\Builder\StoreObject($riak))
     ->build();
 $storeSummary->execute();
 
-
 // Fetching related data by shared key
 $fetched_customer = (new Command\Builder\FetchObject($riak))
                     ->atLocation(new Location('1', $customersBucket))
@@ -206,7 +203,6 @@ $fetched_customer->orderSummary =
 
 print("Customer with OrderSummary data: \n");
 print_r($fetched_customer);
-
 
 // Adding Index Data
 $keys = array(1,2,3);
@@ -229,7 +225,6 @@ foreach ($keys as $key) {
 }
 unset($key);
 
-
 // Index Queries
 
 // Query for orders where the SalespersonId int index is set to 9000
@@ -242,12 +237,12 @@ $janes_orders = $fetchIndex->execute()->getResults();
 print("\n\nJane's Orders: \n");
 print_r($janes_orders);
 
-// Query for orders where the OrderDate bin index is 
+// Query for orders where the OrderDate bin index is
 // between 2013-10-01 and 2013-10-31
 $fetchOctoberOrders = (new Command\Builder\QueryIndex($riak))
                         ->inBucket($ordersBucket)
                         ->withIndexName('OrderDate_bin')
-                        ->withRangeValue('2013-10-01','2013-10-31')
+                        ->withRangeValue('2013-10-01', '2013-10-31')
                         ->withReturnTerms(true)
                         ->build();
 
@@ -256,13 +251,12 @@ $octobers_orders = $fetchOctoberOrders->execute()->getResults();
 print("\n\nOctober's Orders: \n");
 print_r($octobers_orders);
 
-
 // Cleanup all our data
 (new Command\Builder\DeleteObject($riak))
     ->atLocation(new Location($customer->customerId, $customersBucket))
     ->build()
     ->execute();
-    
+
 foreach ($orders as $order) {
     (new Command\Builder\DeleteObject($riak))
         ->atLocation(new Location($order->orderId, $ordersBucket))
@@ -275,4 +269,3 @@ unset($order);
     ->atLocation(new Location($orderSummary->customerId, $orderSummariesBucket))
     ->build()
     ->execute();
-?>
