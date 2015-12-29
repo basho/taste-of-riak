@@ -75,9 +75,9 @@ func main() {
 	}
 
 	for _, msgKey := range joe_tl.MsgKeys {
-		m, merr := msgRepo.Get(msgKey, false)
-		if merr != nil {
-			util.ErrExit(merr)
+		m, err = msgRepo.Get(msgKey, false)
+		if err != nil {
+			util.ErrExit(err)
 		}
 		tl_msg := m.(*models.Msg)
 		util.Log.Println("From: ", tl_msg.Sender)
